@@ -1,0 +1,29 @@
+{
+  "portals": {
+    "europages": {
+      "engine": "selenium",
+      "base_url": "https://www.europages.co.uk",
+      "search_path_template": "/companies/pg-{page}/{sector}.html",
+      "selectors": {
+        "company_profiles": "a[data-test='company-name']",
+        "next_page": "a[data-test='pagination-next']",
+        "company_name": "a.company-name",
+        "email_containers": "a[href^='mailto:'], .contact-email, .email",
+        "website_links": "a.btn.btn--subtle.btn--md.website-button",
+        "company_address": "div.company-address",
+        "country": "div[class='flex gap-1 items-center mt-0.5']"
+      },
+      "max_pages": 50,
+      "delay_between_requests": 2
+    },
+
+    "yellowpages": {
+        "engine": "selenium",
+        "base_url": "https://www.yellowpages.com",
+        "search_path_template": "/search?search_terms={sector}&page={page}",
+        "selectors": {
+
+        }
+    }
+  }
+}
