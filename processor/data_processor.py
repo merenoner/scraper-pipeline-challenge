@@ -1,3 +1,7 @@
+"""
+Data processor class for cleaning and processing scraped data.
+"""
+
 import pandas as pd
 import logging
 from typing import List, Dict, Any, Set
