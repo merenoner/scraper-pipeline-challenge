@@ -128,8 +128,6 @@ class DataProcessor:
     def deduplicate_records(self, records: List[Dict[str, Any]], 
                           key_fields: List[str] = None) -> List[Dict[str, Any]]:
         """
-        Remove duplicate records based on key fields.
-        
         Args:
             records: List of record dictionaries
             key_fields: Fields to use for deduplication (default: ['Name', 'Email'])
@@ -165,8 +163,6 @@ class DataProcessor:
         
     def filter_invalid_records(self, records: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """
-        Filter out records with invalid data.
-        
         Args:
             records: List of record dictionaries
             
@@ -232,8 +228,6 @@ class DataProcessor:
                            remove_duplicates: bool = True,
                            filter_invalid: bool = True) -> List[Dict[str, Any]]:
         """
-        Main method to process scraped data.
-        
         Args:
             records: List of scraped record dictionaries
             remove_duplicates: Whether to remove duplicate records
@@ -262,8 +256,6 @@ class DataProcessor:
     def save_to_csv(self, records: List[Dict[str, Any]], filename: str, 
                    columns: List[str] = None) -> bool:
         """
-        Save records to CSV file.
-        
         Args:
             records: List of record dictionaries
             filename: Output filename
@@ -294,8 +286,6 @@ class DataProcessor:
             
     def get_data_statistics(self, records: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
-        Get statistics about the processed data.
-        
         Args:
             records: List of processed records
             
@@ -316,3 +306,71 @@ class DataProcessor:
         }
             
         return stats
+    
+    def generate_summary_log(self, raw_details: List[Dict[str, Any]], raw_emails: List[Dict[str, Any]], 
+                             pages_scraped: int, log_path: str, start_time, end_time, duration):
+        """
+        Args:
+            raw_details: The list of raw company detail dicts from the scraper.
+            raw_emails: The list of raw email dicts from the scraper.
+            pages_scraped: The number of pages scraped.
+            log_path: The path to save the summary log.
+            start_time: The start time of the process.
+            end_time: The end time of the process.
+            duration: The total duration of the process.
+        """
+        total_profiles = len(raw_details)
+        
+        # --- Identify Notable Cases ---
+        no_website = [d['name'] for d in raw_details if d.get('name') and not d.get('website')]
+        emails_on_main = [d['name'] for d in raw_details if d.get('name') and d.get('email_source') == 'main_page']
+        
+        # A company has no email found if its website was scraped but the corresponding email list is empty.
+        no_email_found = [
+            details['name']
+            for i, details in enumerate(raw_details)
+            if details.get('name') and details.get('website') and not raw_emails[i]['emails']
+        ]
+
+        # --- Calculate Final Statistics ---
+        companies_with_email = sum(1 for e in raw_emails if e['emails'])
+        
+        country_counts = {}
+        for d in raw_details:
+            country = d.get('country')
+            if country:
+                cleaned_country = self.clean_country(country)
+                country_counts[cleaned_country] = country_counts.get(cleaned_country, 0) + 1
+
+        with open(log_path, 'w', encoding='utf-8') as f:
+            f.write("--- Scraping Summary ---\n\n")
+            f.write(f"Start Time: {start_time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write(f"End Time:   {end_time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write(f"Duration:   {str(duration).split('.')[0]}\n\n") # Format to remove microseconds
+            f.write(f"Scraped {pages_scraped} pages and found {total_profiles} company profiles.\n\n")
+            
+            f.write("\n--- Final Statistics ---\n")
+            f.write(f"Total companies with at least one email found: {companies_with_email} / {total_profiles}\n")
+            
+            f.write("\nCountry Frequency:\n")
+            if country_counts:
+                sorted_countries = sorted(country_counts.items(), key=lambda item: item[1], reverse=True)
+                for country, count in sorted_countries:
+                    f.write(f"- {country}: {count}\n")
+            else:
+                f.write("No country data available.\n")
+
+            f.write("--- Notable Cases ---\n")
+            f.write(f"Companies with no website link: {len(no_website)}\n")
+            if no_website:
+                f.write("\n".join(f"- {name}" for name in no_website[:10]) + "\n") # Show a few examples
+                if len(no_website) > 10: f.write("...\n")
+
+            f.write(f"\nCompanies with no email found on their site: {len(no_email_found)}\n")
+            if no_email_found:
+                f.write("\n".join(f"- {name}" for name in no_email_found[:10]) + "\n")
+                if len(no_email_found) > 10: f.write("...\n")
+
+            
+                 
+        self.logger.info(f"Summary log generated at {log_path}")

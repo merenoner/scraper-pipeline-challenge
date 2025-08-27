@@ -33,15 +33,16 @@ class RequestsScraper:
         time.sleep(random.uniform(0.5, 1.5))
 
     def scrape(self) -> Dict[str, Any]:
-        company_profiles = self.extract_company_profiles()
+        company_profiles, pages_scraped = self.extract_company_profiles()
         details, emails = self.extract_details_and_emails(company_profiles)
         return {
             "company_profiles": company_profiles,
             "details": details,
             "emails": emails,
+            "pages_scraped": pages_scraped,
         }
 
-    def extract_company_profiles(self) -> List[str]:
+    def extract_company_profiles(self) -> Tuple[List[str], int]:
         links = set()
         base_url = self.config["base_url"]
         search_path_template = base_url + self.config["search_path_template"]
@@ -74,7 +75,7 @@ class RequestsScraper:
             except requests.RequestException as e:
                 self.logger.error(f"Failed to fetch {page_url}: {e}")
                 break
-        return list(links)
+        return list(links), current_page - 1
 
     def extract_details_and_emails(self, company_profiles: List[str]) -> Tuple[List[Dict[str, str]], List[Dict[str, List[str]]]]:
         details = []
@@ -82,7 +83,7 @@ class RequestsScraper:
 
         for profile_url in company_profiles:
             print(f"Visiting company profile: {profile_url}")
-            profile_details = {'name': None, 'address': None, 'country': None, 'website': None}
+            profile_details = {'name': None, 'address': None, 'country': None, 'website': None, 'email_source': 'not_found'}
             website_emails = {'emails': []}
             
             try:
@@ -113,6 +114,8 @@ class RequestsScraper:
                         self._random_delay()
                         
                         found_emails = self.email_extractor.extract_and_filter_emails(web_response.text, 'html', website_url)
+                        if found_emails:
+                            profile_details['email_source'] = 'main_page'
                         
                         if not found_emails:
                             # Search for contact page links on the website's soup
@@ -128,6 +131,8 @@ class RequestsScraper:
                             if contact_page_url:
                                 contact_response = self.session.get(contact_page_url, timeout=15)
                                 found_emails = self.email_extractor.extract_and_filter_emails(contact_response.text, 'html', contact_page_url)
+                                if found_emails:
+                                    profile_details['email_source'] = 'contact_page'
 
                         website_emails['emails'] = found_emails
                     except requests.RequestException as e:

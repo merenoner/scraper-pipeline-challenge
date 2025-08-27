@@ -12,10 +12,8 @@ from bs4 import BeautifulSoup
 
 
 class EmailExtractor:
-    """Utility class for extracting and validating email addresses."""
     
     def __init__(self):
-        """Initialize the email extractor with patterns and filters."""
         self.logger = logging.getLogger(__name__)
         
         # Common email regex patterns
@@ -128,15 +126,6 @@ class EmailExtractor:
         return emails - to_remove
         
     def extract_emails_from_text(self, text: str) -> Set[str]:
-        """
-        Extract email addresses from plain text.
-        
-        Args:
-            text: Text content to search
-            
-        Returns:
-            Set of found email addresses
-        """
         emails = set()
         
         for pattern in self.compiled_patterns:
@@ -150,16 +139,6 @@ class EmailExtractor:
         return emails
         
     def extract_emails_from_html(self, html: str, base_url: str = None) -> Set[str]:
-        """
-        Extract email addresses from HTML content.
-        
-        Args:
-            html: HTML content to search
-            base_url: Base URL for resolving relative links
-            
-        Returns:
-            Set of found email addresses
-        """
         emails = set()
         soup = BeautifulSoup(html, 'lxml')
         
@@ -173,8 +152,8 @@ class EmailExtractor:
                 if email and self.is_valid_email(email):
                     emails.add(email.lower())
         
-        # Extract from text content
-        text_content = soup.get_text()
+        # Extract from text content, using a separator to prevent words from merging
+        text_content = soup.get_text(separator=' ')
         text_emails = self.extract_emails_from_text(text_content)
         emails.update(text_emails)
         
@@ -191,7 +170,7 @@ class EmailExtractor:
         for selector in email_selectors:
             elements = soup.select(selector)
             for element in elements:
-                element_text = element.get_text()
+                element_text = element.get_text(separator=' ')
                 element_emails = self.extract_emails_from_text(element_text)
                 emails.update(element_emails)
                 
@@ -213,6 +192,9 @@ class EmailExtractor:
         if not email:
             return None
             
+        # Aggressively remove anything that looks like an HTML tag or is inside angle brackets
+        email = re.sub(r'<[^>]+>', '', email)
+
         # Remove whitespace
         email = email.strip()
         
@@ -257,15 +239,6 @@ class EmailExtractor:
         return True
         
     def score_email_business_relevance(self, email: str) -> float:
-        """
-        Score how likely an email is to be a business email.
-        
-        Args:
-            email: Email to score
-            
-        Returns:
-            Score between 0 and 1 (higher = more business-like)
-        """
         if not email:
             return 0.0
             

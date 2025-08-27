@@ -1,0 +1,32 @@
+--- Scraping Summary ---
+
+Start Time: 2025-08-27 17:58:29
+End Time:   2025-08-27 18:05:49
+Duration:   0:07:20
+
+Scraped 3 pages and found 90 company profiles.
+
+
+--- Final Statistics ---
+Total companies with at least one email found: 68 / 90
+
+Country Frequency:
+- Germany: 75
+- Switzerland: 11
+- Austria: 4
+--- Notable Cases ---
+Companies with no website link: 1
+- SBE Consulting GmbH
+
+Companies with no email found on their site: 21
+- AGRANA Stärke GmbH
+- ICP-Nailcare GmbH
+- PAPACKS SALES GmbH
+- eskage-eskamint Schierholz GmbH
+- Gid-Sab GmbH
+- CMG - Cosmetic Marketing GmbH
+- Caire-exotic products UG
+- ApoFit Arzneimittelvertrieb GmbH
+- Herzig Interlook AG
+- PALUMA GmbH
+...

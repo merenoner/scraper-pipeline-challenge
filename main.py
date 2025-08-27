@@ -1,5 +1,4 @@
 import os
-# Suppress TensorFlow logs
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 import json
@@ -8,6 +7,7 @@ import logging
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
+import datetime
 
 from scraper.selenium_scraper import SeleniumScraper
 from scraper.requests_scraper import RequestsScraper
@@ -32,6 +32,7 @@ def run_pipeline(portal: str, sector: str, max_pages: int, headless: bool = True
         max_pages (int): Max pages to scrape
         headless (bool, optional): Whether to run the browser in headless mode. Defaults to True.
     """
+    start_time = datetime.datetime.now()
     config = load_config(portal)
     
     # --- Scraper Factory ---
@@ -50,16 +51,15 @@ def run_pipeline(portal: str, sector: str, max_pages: int, headless: bool = True
     else:
         raise ValueError(f"Unsupported engine: {config['engine']}")
     # --------------------
-
+    
     try:
         scraped_data = scraper.scrape()
         processor = DataProcessor()
 
-        # Create data directory if it doesn't exist
         output_dir = Path("data")
         output_dir.mkdir(exist_ok=True)
 
-        # 1. Save company profile links
+        # 1. Save company profile links, links_<sector>.csv
         links_filename = output_dir / f"links_{sector}.csv"
         profile_links = [{"profile_url": url} for url in scraped_data["company_profiles"]]
         processor.save_to_csv(profile_links, str(links_filename))
@@ -81,7 +81,7 @@ def run_pipeline(portal: str, sector: str, max_pages: int, headless: bool = True
                 "Profile_URL": profile_url
             })
 
-        # 2. Save emails with company name and country
+        # 2. Save emails with company name and country, emails_<sector>.csv
         emails_filename = output_dir / f"emails_{sector}.csv"
         email_records = []
         for record in records:
@@ -94,18 +94,32 @@ def run_pipeline(portal: str, sector: str, max_pages: int, headless: bool = True
         processor.save_to_csv(email_records, str(emails_filename))
         print(f"Successfully saved {len(email_records)} records with emails to {emails_filename}")
 
-        # 3. Process and save detailed data
+        # 3. Process and save detailed data, detailed_<sector>.csv
         detailed_filename = output_dir / f"detailed_{sector}.csv"
         processed_data = processor.process_scraped_data(records)
         processor.save_to_csv(processed_data, str(detailed_filename))
         print(f"Successfully saved {len(processed_data)} processed records to {detailed_filename}")
 
-        # Get and print statistics for the main detailed file
         stats = processor.get_data_statistics(processed_data)
         print(f"\n--- Data Statistics for {detailed_filename} ---")
         for key, value in stats.items():
             print(f"{key}: {value}")
         print("--------------------------------------------------\n")
+
+        # 4. Generate and save summary log, summary_<sector>.log
+        end_time = datetime.datetime.now()
+        duration = end_time - start_time
+        summary_log_path = output_dir / f"summary_{sector}.log"
+        processor.generate_summary_log(
+            raw_details=scraped_data["details"],
+            raw_emails=scraped_data["emails"],
+            pages_scraped=scraped_data["pages_scraped"],
+            log_path=str(summary_log_path),
+            start_time=start_time,
+            end_time=end_time,
+            duration=duration
+        )
+        print(f"Successfully generated summary log at {summary_log_path}")
 
     finally:
         # Close the driver only if it's a selenium scraper and the handler exists
